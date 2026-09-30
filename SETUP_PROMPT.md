@@ -3,7 +3,9 @@
 このファイルは、別のMacに ChatGPT Usage Meter（ChatGPTプランのCodex使用上限をメニューバーに表示するmacOSアプリ）を導入するための自己完結した指示書です。
 ユーザーからこのファイル（またはこのリポジトリのURL）を渡されて「これで実装して」と言われたら、以下を上から順に実施してください。
 
-**想定環境**: 開発元のMacと同じ構成（macOS 27 / Xcode 27 / Homebrew導入済み / Xcodeに開発元と同じApple IDでサインイン済み）。これ以外の環境向けの分岐は用意していないので、違いが見つかったら中断してユーザーに相談する。
+**想定環境**: macOS 27 / Xcode 27 / Homebrew導入済み / **Xcodeに自分のApple IDでサインイン済み**（無料のApple IDでよい。開発元と同じApple IDである必要はない）。
+署名に使うTeam IDはそのMacの証明書から自動で読み取るので、`project.yml` の `DEVELOPMENT_TEAM`（開発元のTeam ID）は書き換えない。
+macOS/Xcodeのバージョンが違う環境は未検証なので、違いが見つかったらその旨をユーザーに伝えたうえで進め、エラーが出たら中断して相談する。
 
 ## このアプリの前提（作業前に把握しておくこと）
 
@@ -27,8 +29,24 @@ brew --version
 security find-identity -v -p codesigning | grep "Apple Development"   # 1件以上あること
 ```
 
-- どれかが想定と違う（macOS/Xcodeのバージョン違い、Homebrewが無い、Apple Development証明書が無い）場合は、ここで中断してユーザーに状況を伝える。
-  証明書が無いのは、XcodeにApple IDでサインインしていないのが原因のことが多い（Xcode → Settings → Accounts）。
+- Homebrewが無い、またはApple Development証明書が無い場合は、ここで中断してユーザーに状況を伝える。
+  証明書が無いのは、XcodeにApple IDでサインインしていないのが原因のことが多い。ユーザーに
+  Xcode → Settings → Accounts →「+」でApple IDを追加し、チームを選んで「Manage Certificates…」→「+」→「Apple Development」を作成してもらう。
+- macOS/Xcodeのバージョンが27でない場合は、未検証である旨をユーザーに伝えてから進める。
+
+### 1.5. 署名に使うTeam IDの確認
+
+リポジトリ取得後（手順3の後）に使うスクリプトと同じ処理なので、ここでは読み取れるかだけ確認する:
+
+```bash
+bash <(curl -fsSL https://raw.githubusercontent.com/withfox-fox1/chatgpt-usage-meter/main/scripts/detect-team.sh); echo "exit=$?"
+```
+
+- `exit=0` で英数字10桁のTeam IDが1行出ればOK（開発元の `2Y64BNQ29J` と違っていてよい）。
+- `exit=1`（証明書なし）: 手順1の証明書の案内をする。
+- `exit=2`（複数チームの証明書がある）: 表示されたTeam IDのどれを使うかユーザーに選んでもらい、以降の手順の
+  `DEVELOPMENT_TEAM="$(bash scripts/detect-team.sh)"` をすべて `DEVELOPMENT_TEAM=選ばれたID` に置き換えて実行する。
+- 証明書名の括弧内（例: `Apple Development: foo@example.com (2DV3KFXZ93)`）はTeam IDではないので、目視で読み取って使わないこと。
 
 ### 2. xcodegen の導入
 
@@ -59,12 +77,16 @@ cd Sources/Shared && swift test; cd ../..
 
 ### 5. Release版のビルド
 
-署名はXcodeにサインイン済みのApple IDの「Apple Development」証明書で、プロファイルなしで行う（`project.yml` の設定どおり。追加の指定は不要）。
+署名はXcodeにサインイン済みのApple IDの「Apple Development」証明書で、プロファイルなしで行う。Team IDだけは `scripts/detect-team.sh` で読み取った値をコマンドラインで渡す（`project.yml` は書き換えない。書き換えると今後の `git pull` で衝突するため）。
 
 ```bash
 xcodebuild -project ChatGPTUsageMeter.xcodeproj -scheme ChatGPTUsageMeter \
-  -configuration Release -derivedDataPath build build
+  -configuration Release -derivedDataPath build \
+  DEVELOPMENT_TEAM="$(bash scripts/detect-team.sh)" build
 ```
+
+- `DEVELOPMENT_TEAM` を付け忘れると、開発元のTeam IDの証明書を探して
+  `No "Mac Development" signing certificate matching team ID "2Y64BNQ29J"` で失敗する（開発元のMac以外では必ず付ける）。
 
 - `-allowProvisioningUpdates` は付けない（プロファイルを使わないため不要）。
 - 最後に `** BUILD SUCCEEDED **` が出れば成功。`AppIcon has 2 unassigned children` の警告は既知で無害。

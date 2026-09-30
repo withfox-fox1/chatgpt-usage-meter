@@ -11,7 +11,7 @@ import ChatGPTUsageCore
 /// MenuBarExtra のラベルはステータスボタンの「画像1枚+タイトル文字列」に変換されるため、
 /// 2枚目以降の Image は表示されない。色付きの要素が複数ある場合は `composite` で1枚に合成して渡す。
 enum MenuBarIcon {
-    /// ChatGPT版の目印: 緑の六角形(Claude版はオレンジの光)。
+    /// ChatGPT版の目印: 緑の六角形(Claude版はオレンジの太陽)。
     static let brandSymbolName = "hexagon.fill"
     static let brandColor = NSColor(srgbRed: 0x10 / 255, green: 0xA3 / 255, blue: 0x7F / 255, alpha: 1)
 

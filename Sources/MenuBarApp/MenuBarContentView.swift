@@ -36,8 +36,13 @@ struct MenuBarContentView: View {
 
     private var header: some View {
         HStack {
-            Label("ChatGPT使用量メーター", systemImage: "gauge.with.dots.needle.bottom.50percent")
-                .font(.headline)
+            Label {
+                Text("ChatGPT使用量メーター")
+            } icon: {
+                Image(systemName: MenuBarIcon.brandSymbolName)
+                    .foregroundStyle(Color(nsColor: MenuBarIcon.brandColor))
+            }
+            .font(.headline)
             if let plan = appState.snapshot?.planType, !plan.isEmpty {
                 Text(plan.capitalized)
                     .font(.caption2.weight(.semibold))

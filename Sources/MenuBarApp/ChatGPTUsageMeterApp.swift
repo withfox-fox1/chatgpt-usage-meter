@@ -27,40 +27,28 @@ struct ChatGPTUsageMeterApp: App {
     }
 }
 
-/// メニューバー常時表示のラベル。常に「5時間制限」の使用率を
-/// アイコン+テキストで表示する。Claude版メーターと並べても区別できるよう "GPT" を前置する。データが無い/未ログインの場合も落ちないようにする。
+/// メニューバー常時表示のラベル。ブランド色のアイコン(緑の六角形)+「5時間制限」の使用率。
+/// 文字で横に長くしないよう、Claude版とはアイコンの形と色だけで見分ける。
+/// 使用率は通常域ではメニューバー標準の文字色、注意/危険域では黄/赤で表示する。
+/// データが無い/未ログインの場合も落ちないようにする。
 private struct MenuBarLabel: View {
     @ObservedObject var appState: AppState
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: symbolName)
-            if let session = appState.snapshot?.session {
-                Text("GPT \(session.percent)%")
+        // ステータスボタンには画像1枚+文字列しか載らないので、色付き要素は1枚に合成済みの画像を使う。
+        if appState.loginState == .loggedOut {
+            Image(nsImage: MenuBarIcon.loggedOutImage())
+        } else if let session = appState.snapshot?.session {
+            if let colored = MenuBarIcon.brandImage(percent: session.percent, severity: severity(of: session)) {
+                Image(nsImage: colored)
             } else {
-                Text("GPT")
+                HStack(spacing: 4) {
+                    Image(nsImage: MenuBarIcon.brandImage())
+                    Text("\(session.percent)%")
+                }
             }
+        } else {
+            Image(nsImage: MenuBarIcon.brandImage())
         }
-        .foregroundStyle(labelColor)
-    }
-
-    private var symbolName: String {
-        if appState.loginState == .loggedOut {
-            return "person.crop.circle.badge.exclamationmark"
-        }
-        guard let session = appState.snapshot?.session else {
-            return "gauge.with.dots.needle.bottom.0percent"
-        }
-        return severity(of: session).gaugeSymbolName
-    }
-
-    private var labelColor: Color {
-        if appState.loginState == .loggedOut {
-            return .orange
-        }
-        guard let session = appState.snapshot?.session else {
-            return .primary
-        }
-        return severity(of: session).accentColor
     }
 }

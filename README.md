@@ -4,7 +4,7 @@ ChatGPTプランの **Codex使用上限**(5時間制限/週間制限)をmacOSの
 [Claude Usage Meter](https://github.com/withfox-fox1/claude-usage-meter) のChatGPT版で、表示・通知・履歴グラフは同じ仕様です。
 
 > ChatGPTの通常チャットには「使用率%」の仕組みが無いため、Codex(Codex CLI / Codexアプリ / chatgpt.com/codex)の上限を表示します。
-> メニューバーでは Claude 版と区別できるよう `GPT 18%` のように表示します。
+> メニューバーには緑の六角形アイコン＋使用率%を表示します。Claude版はオレンジの光アイコンなので、並べても形と色で見分けられます。%は50%以上で黄、80%以上で赤になります。
 
 > 別のMacへの導入は、[SETUP_PROMPT.md](SETUP_PROMPT.md) を Claude Code に渡せば自動で行えます。
 
@@ -77,7 +77,7 @@ ditto build/Build/Products/Release/ChatGPTUsageMeter.app /Applications/ChatGPTUs
 open /Applications/ChatGPTUsageMeter.app
 ```
 
-初回起動時はメニューバーの「GPT」→「ログイン」から chatgpt.com にログインしてください（Googleアカウント等でのログインも可）。
+初回起動時はメニューバーの緑の六角形アイコン →「ログイン」から chatgpt.com にログインしてください（Googleアカウント等でのログインも可）。
 Mac起動時に自動で立ち上げたい場合は、システム設定 → 一般 → ログイン項目 に `/Applications/ChatGPTUsageMeter.app` を追加します。
 
 ## 既知の制限事項

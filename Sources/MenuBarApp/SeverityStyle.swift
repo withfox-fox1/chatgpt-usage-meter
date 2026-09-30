@@ -32,15 +32,6 @@ extension UsageSeverity {
         case .critical: return "危険"
         }
     }
-
-    /// メニューバーのゲージアイコン(gauge.with.dots.needle系)。
-    var gaugeSymbolName: String {
-        switch self {
-        case .normal: return "gauge.with.dots.needle.bottom.0percent"
-        case .warning: return "gauge.with.dots.needle.bottom.50percent"
-        case .critical: return "gauge.with.dots.needle.bottom.100percent"
-        }
-    }
 }
 
 /// UsageLimit の percent から severity を求めるショートハンド。

@@ -30,25 +30,19 @@ security find-identity -v -p codesigning | grep "Apple Development"   # 1件以�
 - どれかが想定と違う（macOS/Xcodeのバージョン違い、Homebrewが無い、Apple Development証明書が無い）場合は、ここで中断してユーザーに状況を伝える。
   証明書が無いのは、XcodeにApple IDでサインインしていないのが原因のことが多い（Xcode → Settings → Accounts）。
 
-### 2. xcodegen と gh の導入
+### 2. xcodegen の導入
 
 ```bash
 brew list xcodegen || brew install xcodegen
-brew list gh || brew install gh
 ```
 
 ### 3. ソースの取得
 
-リポジトリは**非公開（private）**なので、GitHubの `withfox-fox1` アカウントでのログインが必要。
+リポジトリは公開（public）なのでログイン不要。
 
-```bash
-gh auth status
-```
-
-- `withfox-fox1` でログイン済みでなければ、ユーザーに `! gh auth login` を実行してもらう（ブラウザでの認証操作が必要なため、Claude Codeからは代行できない）。
 - `~/chatgpt-usage-meter` が**無い**場合:
   ```bash
-  gh repo clone withfox-fox1/chatgpt-usage-meter ~/chatgpt-usage-meter
+  git clone https://github.com/withfox-fox1/chatgpt-usage-meter.git ~/chatgpt-usage-meter
   ```
 - **既にある**場合: `git status --short` で未コミットの変更が無いことを確認してから `git pull --ff-only`。
   変更がある場合は勝手に捨てず、ユーザーに確認する。

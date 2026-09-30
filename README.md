@@ -6,6 +6,8 @@ ChatGPTプランの **Codex使用上限**(5時間制限/週間制限)をmacOSの
 > ChatGPTの通常チャットには「使用率%」の仕組みが無いため、Codex(Codex CLI / Codexアプリ / chatgpt.com/codex)の上限を表示します。
 > メニューバーでは Claude 版と区別できるよう `GPT 18%` のように表示します。
 
+> 別のMacへの導入は、[SETUP_PROMPT.md](SETUP_PROMPT.md) を Claude Code に渡せば自動で行えます。
+
 ## 仕組み
 
 1. ログイン画面(WKWebView)で chatgpt.com にログインする

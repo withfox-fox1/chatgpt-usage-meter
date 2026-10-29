@@ -16,7 +16,7 @@ macOS/Xcodeのバージョンが違う環境は未検証なので、違いが見
   **App Groups / keychain-access-groups などプロファイルが必要な権限は絶対に追加しないこと。**
 - 常用は `/Applications/ChatGPTUsageMeter.app` から起動する。XcodeのRun（Cmd+R）で起動するとデバッガ配下になり、Xcodeを閉じると一緒に終了してしまう
 - Claude Usage Meter とはバンドルID・Keychain項目・設定がすべて別なので、同じMacに両方入れてよい。互いに干渉しない
-- 以下のコマンドは、特に断りがなければリポジトリのルート（`~/chatgpt-usage-meter`）で実行する
+- 以下のコマンドは、特に断りがなければリポジトリのルート（`~/claude/tools/chatgpt-usage-meter`）で実行する
 
 ## 手順
 
@@ -58,9 +58,9 @@ brew list xcodegen || brew install xcodegen
 
 リポジトリは公開（public）なのでログイン不要。
 
-- `~/chatgpt-usage-meter` が**無い**場合:
+- `~/claude/tools/chatgpt-usage-meter` が**無い**場合:
   ```bash
-  git clone https://github.com/withfox-fox1/chatgpt-usage-meter.git ~/chatgpt-usage-meter
+  git clone https://github.com/withfox-fox1/chatgpt-usage-meter.git ~/claude/tools/chatgpt-usage-meter
   ```
 - **既にある**場合: `git status --short` で未コミットの変更が無いことを確認してから `git pull --ff-only`。
   変更がある場合は勝手に捨てず、ユーザーに確認する。
@@ -150,7 +150,7 @@ security find-generic-password -s dev.local.chatgptusagemeter.token >/dev/null 2
 ## 今後コードを更新したとき
 
 ```bash
-cd ~/chatgpt-usage-meter && git pull --ff-only && xcodegen generate
+cd ~/claude/tools/chatgpt-usage-meter && git pull --ff-only && xcodegen generate
 ```
 
 のあと、手順5〜7（ビルド → 検証 → /Applications に上書き）を繰り返す。ログイン項目の登録とアプリへの再ログインはやり直さなくてよい（Keychainのトークンは、同じバンドルID・同じ証明書のビルドならそのまま使える）。

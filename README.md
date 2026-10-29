@@ -39,7 +39,7 @@ brew install xcodegen
 ### 1. Xcodeプロジェクトを生成
 
 ```bash
-cd /Users/agents/chatgpt-usage-meter
+cd /Users/agents/claude/tools/chatgpt-usage-meter
 xcodegen generate
 ```
 

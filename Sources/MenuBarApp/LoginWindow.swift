@@ -13,6 +13,7 @@ import WebKit
 /// - 成功したらアクセストークンをコールバックで呼び出し元に渡す(呼び出し元が Keychain へ保存する)。
 struct LoginWebView: NSViewRepresentable {
     let url: URL
+    let dataStore: WKWebsiteDataStore
     let onLoginDetected: (String) -> Void
 
     func makeCoordinator() -> Coordinator {
@@ -20,7 +21,7 @@ struct LoginWebView: NSViewRepresentable {
     }
 
     func makeNSView(context: Context) -> WKWebView {
-        let webView = WebViewLoginProbe.makeWebView()
+        let webView = WebViewLoginProbe.makeWebView(dataStore: dataStore)
         webView.navigationDelegate = context.coordinator
         webView.load(URLRequest(url: url))
         return webView
@@ -64,6 +65,7 @@ struct LoginWebView: NSViewRepresentable {
 // MARK: - ログイン画面(説明文 + WebView)
 
 struct LoginContentView: View {
+    let dataStore: WKWebsiteDataStore
     let onLoginDetected: (String) -> Void
 
     private var loginURL: URL {
@@ -89,7 +91,7 @@ struct LoginContentView: View {
 
             Divider()
 
-            LoginWebView(url: loginURL, onLoginDetected: onLoginDetected)
+            LoginWebView(url: loginURL, dataStore: dataStore, onLoginDetected: onLoginDetected)
                 .frame(minWidth: 480, minHeight: 560)
         }
     }
@@ -107,14 +109,22 @@ final class LoginWindowController {
 
     private init() {}
 
-    func present(onLoginDetected: @escaping (String) -> Void) {
-        if let window {
-            window.makeKeyAndOrderFront(nil)
-            NSApp.activate(ignoringOtherApps: true)
-            return
-        }
+    /// ログインウィンドウを開く。
+    /// - Parameters:
+    ///   - dataStore: ログインするアカウント用のWebView保存領域。
+    ///   - onLoginDetected: ログイン成功時にアクセストークンを渡して呼ばれる。
+    ///   - onCancel: ログインせずにウィンドウが閉じられたときに呼ばれる。
+    func present(
+        dataStore: WKWebsiteDataStore,
+        onLoginDetected: @escaping (String) -> Void,
+        onCancel: @escaping () -> Void = {}
+    ) {
+        // 別アカウント用のウィンドウが開いていたら閉じてから開き直す(コールバックの取り違え防止)。
+        close()
 
-        let contentView = LoginContentView(onLoginDetected: { [weak self] token in
+        var succeeded = false
+        let contentView = LoginContentView(dataStore: dataStore, onLoginDetected: { [weak self] token in
+            succeeded = true
             onLoginDetected(token)
             self?.close()
         })
@@ -127,7 +137,10 @@ final class LoginWindowController {
         newWindow.center()
         newWindow.isReleasedWhenClosed = false
         newWindow.delegate = WindowCloseObserver.shared
-        WindowCloseObserver.shared.onClose = { [weak self] in self?.window = nil }
+        WindowCloseObserver.shared.onClose = { [weak self] in
+            self?.window = nil
+            if !succeeded { onCancel() }
+        }
 
         self.window = newWindow
         newWindow.makeKeyAndOrderFront(nil)

@@ -12,11 +12,15 @@ public final class NotificationManager {
     private let thresholds: [Int]
     private let defaults: UserDefaults
     private let notify: (_ label: String, _ percent: Int, _ threshold: Int) -> Void
+    private let keySuffix: String
 
-    public init(thresholds: [Int] = [80, 95]) {
+    /// - Parameter namespace: Separates the tracked threshold state per account.
+    ///   `nil` uses the original (pre multi-account) keys.
+    public init(thresholds: [Int] = [80, 95], namespace: String? = nil) {
         self.thresholds = thresholds.sorted()
         self.defaults = .standard
         self.notify = NotificationManager.postUserNotification
+        self.keySuffix = namespace.map { ".\($0)" } ?? ""
     }
 
     /// Test/internal seam: lets tests inject an isolated UserDefaults suite
@@ -25,6 +29,15 @@ public final class NotificationManager {
         self.thresholds = thresholds.sorted()
         self.defaults = defaults
         self.notify = notify
+        self.keySuffix = ""
+    }
+
+    /// Removes the tracked threshold state (used when an account is deleted).
+    public func clear() {
+        for metric in ["session", "weekly"] {
+            defaults.removeObject(forKey: levelKey(metric))
+            defaults.removeObject(forKey: resetsAtKey(metric))
+        }
     }
 
     public func evaluate(previous: UsageSnapshot?, current: UsageSnapshot) {
@@ -45,10 +58,10 @@ public final class NotificationManager {
     private func evaluateMetric(metric: String, label: String, previousLimit: UsageLimit?, currentLimit: UsageLimit?) {
         guard let currentLimit else { return }
 
-        let levelKey = Self.levelKey(metric)
-        let resetsAtKey = Self.resetsAtKey(metric)
+        let levelStorageKey = levelKey(metric)
+        let resetsAtStorageKey = resetsAtKey(metric)
 
-        let storedResetsAt = defaults.object(forKey: resetsAtKey) as? Double
+        let storedResetsAt = defaults.object(forKey: resetsAtStorageKey) as? Double
         let currentResetsAt = currentLimit.resetsAt.timeIntervalSince1970
 
         let rolledOver: Bool
@@ -66,7 +79,7 @@ public final class NotificationManager {
         } else if let previousLimit {
             previousLevel = level(forPercent: previousLimit.percent)
         } else {
-            previousLevel = defaults.object(forKey: levelKey) as? Int ?? 0
+            previousLevel = defaults.object(forKey: levelStorageKey) as? Int ?? 0
         }
 
         let currentLevel = level(forPercent: currentLimit.percent)
@@ -76,8 +89,8 @@ public final class NotificationManager {
             notify(label, currentLimit.percent, crossedThreshold)
         }
 
-        defaults.set(currentLevel, forKey: levelKey)
-        defaults.set(currentResetsAt, forKey: resetsAtKey)
+        defaults.set(currentLevel, forKey: levelStorageKey)
+        defaults.set(currentResetsAt, forKey: resetsAtStorageKey)
     }
 
     /// Number of thresholds at or below `percent` (0 = below all thresholds).
@@ -89,12 +102,12 @@ public final class NotificationManager {
         return level
     }
 
-    private static func levelKey(_ metric: String) -> String {
-        "ChatGPTUsageCore.notif.\(metric).level"
+    private func levelKey(_ metric: String) -> String {
+        "ChatGPTUsageCore.notif.\(metric).level" + keySuffix
     }
 
-    private static func resetsAtKey(_ metric: String) -> String {
-        "ChatGPTUsageCore.notif.\(metric).resetsAt"
+    private func resetsAtKey(_ metric: String) -> String {
+        "ChatGPTUsageCore.notif.\(metric).resetsAt" + keySuffix
     }
 
     private static func postUserNotification(label: String, percent: Int, threshold: Int) {

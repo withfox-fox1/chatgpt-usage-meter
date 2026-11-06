@@ -48,4 +48,28 @@ struct UsageStoreTests {
         #expect(history[0].timestamp < history[1].timestamp)
         #expect(history[1].timestamp < history[2].timestamp)
     }
+
+    @Test func namespacedStoresAreIsolatedFromEachOther() {
+        let legacy = UsageStore()
+        let other = UsageStore(namespace: "test-account")
+        defer { other.clear() }
+        let snapshot = UsageSnapshot(
+            session: UsageLimit(kind: "session", percent: 7, resetsAt: Date(), isActive: true),
+            weekly: nil,
+            fetchedAt: Date(),
+            isStale: false,
+            needsLogin: false
+        )
+
+        other.save(snapshot: snapshot)
+        other.appendHistory(HistoryPoint(timestamp: Date(), sessionPercent: 7, weeklyPercent: nil), maxPoints: 10)
+
+        #expect(other.loadSnapshot() == snapshot)
+        #expect(legacy.loadSnapshot() == nil)
+        #expect(legacy.loadHistory().isEmpty)
+
+        other.clear()
+        #expect(other.loadSnapshot() == nil)
+        #expect(other.loadHistory().isEmpty)
+    }
 }

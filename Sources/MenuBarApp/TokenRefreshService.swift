@@ -13,7 +13,8 @@ import ChatGPTUsageCore
 /// 切り替えられるようにする。
 @MainActor
 final class TokenRefreshService {
-    private let keychain: KeychainStore
+    private var keychain: KeychainStore
+    private var dataStore: WKWebsiteDataStore
     private let refreshInterval: TimeInterval
     private var timer: DispatchSourceTimer?
     private var hiddenWindow: NSWindow?
@@ -30,9 +31,17 @@ final class TokenRefreshService {
 
     var isRefreshing: Bool { hiddenWindow != nil }
 
-    init(keychain: KeychainStore, refreshInterval: TimeInterval = 60 * 60 * 24) {
+    init(keychain: KeychainStore, dataStore: WKWebsiteDataStore, refreshInterval: TimeInterval = 60 * 60 * 24) {
         self.keychain = keychain
+        self.dataStore = dataStore
         self.refreshInterval = refreshInterval
+    }
+
+    /// 対象アカウントを切り替える。実行中の再取得は破棄する(結果を新しいアカウントへ書き込まないため)。
+    func setAccount(keychain: KeychainStore, dataStore: WKWebsiteDataStore) {
+        teardownOffscreenWebView()
+        self.keychain = keychain
+        self.dataStore = dataStore
     }
 
     func start() {
@@ -59,17 +68,19 @@ final class TokenRefreshService {
         guard hiddenWindow == nil else { return } // 実行中は多重起動しない
         guard let url = URL(string: "https://chatgpt.com/") else { return }
 
-        let newWebView = WebViewLoginProbe.makeWebView()
+        let newWebView = WebViewLoginProbe.makeWebView(dataStore: dataStore)
 
+        // 実行中にアカウントが切り替わった場合、結果は破棄する(別アカウントのトークンを上書きしないため)。
+        let targetKeychain = keychain
         let newCoordinator = RefreshCoordinator(
             onSuccess: { [weak self] token in
-                guard let self else { return }
-                try? self.keychain.saveToken(token)
+                guard let self, self.keychain === targetKeychain else { return }
+                try? targetKeychain.saveToken(token)
                 self.teardownOffscreenWebView()
                 self.onTokenRefreshed?()
             },
             onFailure: { [weak self] in
-                guard let self else { return }
+                guard let self, self.keychain === targetKeychain else { return }
                 self.teardownOffscreenWebView()
                 self.onLoginExpired?()
             }
@@ -96,7 +107,7 @@ final class TokenRefreshService {
         // 一定時間内に成否が判定できなければ諦めて後片付けする(ネットワーク断など)。
         // タイムアウトはネットワーク不調等の可能性もあるためログイン切れ扱いにはしない。
         let timeout = DispatchWorkItem { [weak self] in
-            guard let self else { return }
+            guard let self, self.keychain === targetKeychain else { return }
             self.teardownOffscreenWebView()
             self.onRefreshInconclusive?()
         }

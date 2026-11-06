@@ -16,11 +16,12 @@ enum WebViewLoginProbe {
     /// Googleアカウント等でのログインは「埋め込みWebView」のUAだと拒否されるため、Safari相当のUAを名乗る。
     static let userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15"
 
-    /// ログイン画面・バックグラウンド再取得で共通のWebView設定(Cookieはアプリ内の既定ストアに永続化)。
+    /// ログイン画面・バックグラウンド再取得で共通のWebView設定。
+    /// Cookieはアカウントごとの保存領域(`dataStore`)に永続化し、他アカウントと混ざらないようにする。
     @MainActor
-    static func makeWebView() -> WKWebView {
+    static func makeWebView(dataStore: WKWebsiteDataStore) -> WKWebView {
         let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .default()
+        configuration.websiteDataStore = dataStore
         let webView = WKWebView(frame: .zero, configuration: configuration)
         webView.customUserAgent = userAgent
         return webView

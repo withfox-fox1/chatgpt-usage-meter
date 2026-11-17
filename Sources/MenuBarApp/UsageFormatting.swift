@@ -22,8 +22,10 @@ enum UsageFormatting {
         return String(format: "%d/%d(%@) %d:%02d", month, day, weekday, hour, minute)
     }
 
-    /// "4時間4分後にリセット" のような相対時刻表記。5時間セッションのリセット表示に使う。
-    static func relativeResetString(_ date: Date, now: Date = Date()) -> String {
+    /// "4時間4分後(14:30)にリセット" のような相対時刻+時刻の表記。5時間セッションのリセット表示に使う。
+    /// リセットが翌日なら "明日 0:30"、それより先なら "11/19(木) 0:30" のように日付も付ける。
+    static func relativeResetString(_ date: Date, now: Date = Date(), calendar: Calendar = .current) -> String {
+        let clock = clockString(date, now: now, calendar: calendar)
         let interval = date.timeIntervalSince(now)
         if interval <= 0 {
             return "まもなくリセット"
@@ -33,14 +35,28 @@ enum UsageFormatting {
         let minutes = totalMinutes % 60
         switch (hours, minutes) {
         case (0, 0):
-            return "まもなくリセット"
+            return "まもなく(\(clock))リセット"
         case (0, let m):
-            return "\(m)分後にリセット"
+            return "\(m)分後(\(clock))にリセット"
         case (let h, 0):
-            return "\(h)時間後にリセット"
+            return "\(h)時間後(\(clock))にリセット"
         case (let h, let m):
-            return "\(h)時間\(m)分後にリセット"
+            return "\(h)時間\(m)分後(\(clock))にリセット"
         }
+    }
+
+    /// 今日なら "14:30"、翌日なら "明日 0:30"、それ以外なら "11/19(木) 0:30"。
+    private static func clockString(_ date: Date, now: Date, calendar: Calendar) -> String {
+        let comps = calendar.dateComponents([.hour, .minute], from: date)
+        let time = String(format: "%d:%02d", comps.hour ?? 0, comps.minute ?? 0)
+        if calendar.isDate(date, inSameDayAs: now) {
+            return time
+        }
+        if let tomorrow = calendar.date(byAdding: .day, value: 1, to: now),
+           calendar.isDate(date, inSameDayAs: tomorrow) {
+            return "明日 \(time)"
+        }
+        return absoluteDateTimeString(date, calendar: calendar)
     }
 
     /// "たった今" / "3分前" / "2時間前" のような相対更新時刻表記。

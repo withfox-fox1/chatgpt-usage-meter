@@ -41,8 +41,12 @@ struct MenuBarContentView: View {
             Label {
                 Text("ChatGPT使用量メーター")
             } icon: {
-                Image(systemName: MenuBarIcon.brandSymbolName)
-                    .foregroundStyle(Color(nsColor: MenuBarIcon.brandColor))
+                Image(MenuBarIcon.brandLogoName)
+                    .renderingMode(.template)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 16, height: 16)
+                    .foregroundStyle(.primary)
             }
             .font(.headline)
             if let plan = appState.snapshot?.planType, !plan.isEmpty {

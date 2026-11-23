@@ -5,20 +5,42 @@ import ChatGPTUsageCore
 /// メニューバーに出す画像の生成。
 ///
 /// MenuBarExtra のラベルは標準ではテンプレート(単色)として描かれ、`foregroundStyle` の色は無視される。
-/// Claude版メーターと並べても一目で見分けられるよう、アイコンはブランド色で塗った
-/// 非テンプレート画像にして色を保持させる。
+/// アイコンは OpenAI 公式の Blossom(Assets の OpenAILogo、出典 openai.com/brand の公式ロゴ ZIP)。
+/// ブランドガイドラインで Blossom への着色が禁じられているため、モノクロで表示する。
+/// 単体表示はテンプレート画像にしてメニューバーの明暗に追従させ、警告マークや色付き数値と
+/// 合成するときは `labelColor`(描画時の外観で解決される)で塗る。
 ///
 /// MenuBarExtra のラベルはステータスボタンの「画像1枚+タイトル文字列」に変換されるため、
 /// 2枚目以降の Image は表示されない。色付きの要素が複数ある場合は `composite` で1枚に合成して渡す。
 enum MenuBarIcon {
-    /// ChatGPT版の目印: 緑の六角形(Claude版はオレンジの太陽)。
-    static let brandSymbolName = "hexagon.fill"
-    static let brandColor = NSColor(srgbRed: 0x10 / 255, green: 0xA3 / 255, blue: 0x7F / 255, alpha: 1)
+    /// ChatGPT版の目印: OpenAI の Blossom(Claude版はオレンジの Claude ロゴ)。
+    static let brandLogoName = "OpenAILogo"
+    static let logoSize = NSSize(width: 16, height: 16)
 
-    /// ブランド色で塗ったアイコン。`dimmed` は未ログイン時など、値が当てにならない状態に使う。
+    /// 単体で表示するアイコン。テンプレート画像なのでメニューバーの明暗に合わせて白/黒になる。
+    /// `dimmed` は未ログイン時など、値が当てにならない状態に使う(合成用の半透明版を返す)。
     static func brandImage(dimmed: Bool = false) -> NSImage {
-        let color = dimmed ? brandColor.withAlphaComponent(0.6) : brandColor
-        return coloredSymbol(brandSymbolName, colors: [color])
+        if dimmed { return tintedLogo(alpha: 0.6) }
+        let image = NSImage(size: logoSize, flipped: false) { rect in
+            (NSImage(named: brandLogoName) ?? NSImage()).draw(in: rect)
+            return true
+        }
+        image.isTemplate = true
+        return image
+    }
+
+    /// 合成用: ロゴを `labelColor` で塗った非テンプレート画像。
+    /// 描画ハンドラ内で色を解決するので、メニューバーの外観(明/暗)に追従する。
+    private static func tintedLogo(alpha: CGFloat = 1) -> NSImage {
+        let base = NSImage(named: brandLogoName) ?? NSImage()
+        let image = NSImage(size: logoSize, flipped: false) { rect in
+            base.draw(in: rect)
+            NSColor.labelColor.withAlphaComponent(alpha).set()
+            rect.fill(using: .sourceAtop)
+            return true
+        }
+        image.isTemplate = false
+        return image
     }
 
     /// 未ログイン時の表示: 薄くしたアイコン + オレンジの警告マーク。
@@ -31,7 +53,7 @@ enum MenuBarIcon {
     /// (メニューバーの明暗に合わせて文字の白/黒が自動で切り替わるため)。
     static func brandImage(percent: Int, severity: UsageSeverity) -> NSImage? {
         guard let text = percentImage(percent, severity: severity) else { return nil }
-        return composite([brandImage(), text])
+        return composite([tintedLogo(), text])
     }
 
     private static func percentImage(_ percent: Int, severity: UsageSeverity) -> NSImage? {
